@@ -25,11 +25,13 @@ Registro de ventas móvil construido con Expo + React Native y Supabase.
 npm install
 ```
 
-2) Variables de entorno (archivo `.env` en la raíz)
+2) Variables de entorno
+
+Duplica `.env.example` como `.env` y completa los valores:
 
 ```bash
-EXPO_PUBLIC_SUPABASE_URL=your_project_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_public_anon_key
+EXPO_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
 ```
 
 > Nota: `.env` ya está ignorado por Git.
