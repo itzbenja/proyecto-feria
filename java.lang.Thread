@@ -1,0 +1,203 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ScrollView
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+interface MenuItem {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  screen?: string;
+  badge?: number;
+  danger?: boolean;
+}
+
+const MenuScreen = ({ navigation }: any) => {
+  const insets = useSafeAreaInsets();
+
+  const menu: MenuItem[] = [
+    { key: 'inicio', label: 'Inicio', icon: <Ionicons name="home-outline" size={22} color="#000" />, screen: 'Inicio' },
+    { key: 'notificaciones', label: 'Notificaciones', icon: <Ionicons name="notifications-outline" size={22} color="#000" />, screen: 'Notificaciones', badge: 1 },
+    { key: 'ayuda', label: 'Ayuda', icon: <Ionicons name="help-circle-outline" size={22} color="#000" />, screen: 'Ayuda' },
+    { key: 'pagos', label: 'Métodos De Pago', icon: <Ionicons name="card-outline" size={22} color="#000" />, screen: 'MetodosPago' },
+    { key: 'mensajes', label: 'Centro De Mensajes', icon: <Ionicons name="mail-outline" size={22} color="#000" />, screen: 'Mensajes' },
+    { key: 'logout', label: 'Cerrar Sesión', icon: <Feather name="log-out" size={22} color="#000" />, danger: true },
+  ];
+
+  const handlePress = (item: MenuItem) => {
+    if (item.key === 'logout') {
+      console.log('Cerrar sesión');
+      return;
+    }
+    if (item.screen) navigation.navigate(item.screen);
+  };
+
+  return (
+    <SafeAreaView style={styles.root}>
+      <LinearGradient colors={['#000000', '#16141d', '#312b5c', '#4A3AFF']} style={styles.gradient}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.profileContainer}>
+            <View style={styles.avatar}>
+              <Ionicons name="person-outline" size={48} color="#000" />
+            </View>
+            <Text style={styles.userName}>Cristian Ramirez</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Perfil')}>
+              <Text style={styles.profileLink}>Tu perfil &gt;</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.menuWrapper}>
+            {menu.map(item => (
+              <TouchableOpacity
+                key={item.key}
+                style={[styles.menuItem, item.danger && { marginTop: 12 }]}
+                activeOpacity={0.75}
+                onPress={() => handlePress(item)}
+              >
+                <View style={styles.menuLeft}>
+                  {item.icon}
+                  <Text style={[styles.menuLabel, item.danger && styles.dangerText]}>
+                    {item.label}
+                  </Text>
+                </View>
+                <View style={styles.menuRight}>
+                  {item.badge ? (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{item.badge}</Text>
+                    </View>
+                  ) : null}
+                  <Ionicons name="chevron-forward" size={18} color="#999" />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+
+        <View style={[styles.bottomBar, { paddingBottom: 6 + insets.bottom }]}>
+          <NavItem
+            icon={<Ionicons name="home-outline" size={24} color="#fff" />}
+            label="Inicio"
+            onPress={() => navigation.navigate('Inicio')}
+          />
+          <NavItem
+            icon={<MaterialCommunityIcons name="calendar-blank-outline" size={24} color="#fff" />}
+            label="Eventos"
+            onPress={() => navigation.navigate('Eventos')}
+          />
+          {/* Espacio para el botón flotante */}
+          <View style={{ width: 80 }} />
+          <NavItem
+            icon={<Ionicons name="notifications-outline" size={24} color="#fff" />}
+            label="Notificaciones"
+            onPress={() => navigation.navigate('Notificaciones')}
+            style={styles.notificationNavItem}
+          />
+          <NavItem
+            icon={<Ionicons name="reorder-three-outline" size={30} color="#fff" />}
+            label="Más"
+            onPress={() => navigation.navigate('Mas')}
+          />
+          {/* Botón flotante central */}
+          <TouchableOpacity
+            style={styles.fab}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Buscar')}
+          >
+            <Ionicons name="search" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </SafeAreaView>
+  );
+};
+
+const NavItem = ({ icon, label, onPress, style }: { icon: React.ReactNode; label: string; onPress: () => void; style?: any }) => (
+  <TouchableOpacity style={[styles.navItem, style]} onPress={onPress} activeOpacity={0.7}>
+    {icon}
+    <Text style={label === "Notificaciones" ? styles.navLabelSmall : styles.navLabel}>{label}</Text>
+  </TouchableOpacity>
+);
+
+export default MenuScreen;
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#000' },
+  gradient: { flex: 1 },
+  scrollContent: { paddingTop: 40, paddingBottom: 140, alignItems: 'center' },
+  profileContainer: { alignItems: 'center', marginBottom: 32 },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 60,
+    backgroundColor: '#d9d9d9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  userName: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  profileLink: { color: '#d1d1d1', fontSize: 12, marginTop: 4, fontWeight: '600' },
+  menuWrapper: { width: '90%', gap: 12 },
+  menuItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuLabel: { fontSize: 15, fontWeight: '700', color: '#000' },
+  dangerText: { color: '#000' },
+  menuRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  badge: {
+    backgroundColor: '#c40000',
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#070707',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    minHeight: 78,
+  },
+  navItem: { alignItems: 'center', justifyContent: 'center', width: 70 },
+  navLabel: { fontSize: 10, color: '#fff', fontWeight: '700', marginTop: 4 },
+  navLabelSmall: { fontSize: 9, color: '#fff', fontWeight: '700', marginTop: 4, width: 70, textAlign: 'center' },
+  fab: {
+    position: 'absolute',
+    left: '50%',
+    transform: [{ translateX: -40 }, { translateY: -30 }],
+    bottom: 0,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#232323',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+  },
+});
