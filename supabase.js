@@ -73,10 +73,13 @@ export const ventasService = {
       const { data, error } = await supabase
         .from('ventas')
         .update({ pagado })
-        .eq('identificacion', ventaId)
+        .eq('id', ventaId)
         .select()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error al actualizar pago:', JSON.stringify(error, null, 2));
+        throw error;
+      }
       return data[0]
     } catch (error) {
       console.error('Error al actualizar pago:', error)
@@ -90,7 +93,7 @@ export const ventasService = {
       const { error } = await supabase
         .from('ventas')
         .delete()
-        .eq('identificacion', ventaId)
+        .eq('id', ventaId)
       
       if (error) throw error
       return true

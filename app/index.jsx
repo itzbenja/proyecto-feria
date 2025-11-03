@@ -9,7 +9,6 @@ import {
   Image,
   Alert,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
   Dimensions,
 } from "react-native";
@@ -186,18 +185,9 @@ export default function Index() {
     ]);
   };
 
-  return (
-    <KeyboardAvoidingView 
-      style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView 
-        style={styles.scrollContainer}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+  // Componente de encabezado que incluye formulario y resumen
+  const renderHeader = () => (
+    <>
       {/* LOGO */}
       <View style={styles.logoWrap}>
         <Image source={logo} style={styles.logo} resizeMode="contain" />
@@ -330,9 +320,20 @@ export default function Index() {
 
       {/* HISTORIAL */}
       <Text style={styles.sectionTitle}>🕘 Historial de ventas</Text>
+    </>
+  );
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
       <FlatList
         data={ventas}
         keyExtractor={(item) => item.id}
+        ListHeaderComponent={renderHeader}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 120 }}
         ListEmptyComponent={<Text style={styles.empty}>Aún no hay ventas.</Text>}
         renderItem={({ item }) => {
@@ -383,7 +384,6 @@ export default function Index() {
           );
         }}
       />
-      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
