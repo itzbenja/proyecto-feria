@@ -53,7 +53,7 @@ export const ventasService = {
         .insert([{
           cliente: ventaData.cliente,
           productos: ventaData.productos,
-          método_pago: ventaData.metodo_pago, // Columna real en tu BD
+          metodo_pago: ventaData.metodo_pago, // Columna sin acento
           fecha: new Date().toISOString()
         }])
         .select()

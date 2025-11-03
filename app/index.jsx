@@ -48,7 +48,7 @@ export default function Index() {
     id: row?.identificacion ?? row?.id ?? uid(),
     cliente: row?.cliente ?? "",
     productos: Array.isArray(row?.productos) ? row.productos : [],
-    metodoPago: row?.método_pago ?? row?.metodo_pago ?? "Efectivo", // Tu columna es método_pago
+    metodoPago: row?.metodo_pago ?? "Efectivo",
     fecha: row?.fecha ?? nowISO(),
     pagado: false, // Tu tabla no tiene esta columna, siempre false
   });
