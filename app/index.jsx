@@ -326,14 +326,16 @@ export default function Index() {
   return (
     <KeyboardAvoidingView 
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
     >
       <FlatList
         data={ventas}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="on-drag"
+        removeClippedSubviews={false}
         contentContainerStyle={{ paddingBottom: 120 }}
         ListEmptyComponent={<Text style={styles.empty}>Aún no hay ventas.</Text>}
         renderItem={({ item }) => {
