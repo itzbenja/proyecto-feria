@@ -48,9 +48,9 @@ export default function Index() {
     id: row?.identificacion ?? row?.id ?? uid(),
     cliente: row?.cliente ?? "",
     productos: Array.isArray(row?.productos) ? row.productos : [],
-    metodoPago: row?.metodo_pago ?? row?.metodoPago ?? "Efectivo",
+    metodoPago: row?.método_pago ?? row?.metodo_pago ?? "Efectivo", // Tu columna es método_pago
     fecha: row?.fecha ?? nowISO(),
-    pagado: !!row?.pagado,
+    pagado: false, // Tu tabla no tiene esta columna, siempre false
   });
 
   useEffect(() => {
@@ -140,14 +140,15 @@ export default function Index() {
       const created = await ventasService.createVenta({
         cliente: cliente.trim(),
         productos: carrito,
-        metodo_pago: metodoPago,
-        pagado: false,
+        metodo_pago: metodoPago
       });
       const nuevaVenta = mapRowToVenta(created);
       setVentas((prev) => [nuevaVenta, ...prev]);
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Supabase", "No se pudo guardar la venta en la base de datos");
+    } catch (_e) {
+      // Mostrar el motivo real para poder corregir rápido (RLS, columna, etc.)
+      console.error("Supabase insert error:", _e);
+      const msg = typeof _e?.message === "string" ? _e.message : JSON.stringify(_e);
+      Alert.alert("Supabase", `No se pudo guardar la venta en la base de datos\n\n${msg}`);
       return;
     }
 
@@ -158,12 +159,8 @@ export default function Index() {
   };
 
   const marcarPagado = async (id) => {
-    try {
-      await ventasService.updatePagado(id, true);
-      setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
-    } catch (_e) {
-      Alert.alert("Supabase", "No se pudo actualizar el estado de pago");
-    }
+    // Solo actualización local, tu tabla no tiene columna pagado
+    setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
   };
 
   const eliminarVenta = (id) => {
