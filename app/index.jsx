@@ -50,7 +50,7 @@ export default function Index() {
     productos: Array.isArray(row?.productos) ? row.productos : [],
     metodoPago: row?.metodo_pago ?? "Efectivo",
     fecha: row?.fecha ?? nowISO(),
-    pagado: false, // Tu tabla no tiene esta columna, siempre false
+    pagado: !!row?.pagado,
   });
 
   useEffect(() => {
@@ -140,7 +140,8 @@ export default function Index() {
       const created = await ventasService.createVenta({
         cliente: cliente.trim(),
         productos: carrito,
-        metodo_pago: metodoPago
+        metodo_pago: metodoPago,
+        pagado: false
       });
       const nuevaVenta = mapRowToVenta(created);
       setVentas((prev) => [nuevaVenta, ...prev]);
@@ -159,8 +160,12 @@ export default function Index() {
   };
 
   const marcarPagado = async (id) => {
-    // Solo actualización local, tu tabla no tiene columna pagado
-    setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
+    try {
+      await ventasService.updatePagado(id, true);
+      setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
+    } catch (_e) {
+      Alert.alert("Supabase", "No se pudo actualizar el estado de pago");
+    }
   };
 
   const eliminarVenta = (id) => {

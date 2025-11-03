@@ -53,7 +53,8 @@ export const ventasService = {
         .insert([{
           cliente: ventaData.cliente,
           productos: ventaData.productos,
-          metodo_pago: ventaData.metodo_pago, // Columna sin acento
+          metodo_pago: ventaData.metodo_pago,
+          pagado: ventaData.pagado || false,
           fecha: new Date().toISOString()
         }])
         .select()
@@ -66,11 +67,21 @@ export const ventasService = {
     }
   },
 
-  // Actualizar estado de pago - La columna pagado no existe, removemos esta función
+  // Actualizar estado de pago
   async updatePagado(ventaId, pagado) {
-    // Tu tabla no tiene columna 'pagado', esta función no hace nada por ahora
-    console.warn('updatePagado: columna pagado no existe en la tabla');
-    return null;
+    try {
+      const { data, error } = await supabase
+        .from('ventas')
+        .update({ pagado })
+        .eq('identificacion', ventaId)
+        .select()
+      
+      if (error) throw error
+      return data[0]
+    } catch (error) {
+      console.error('Error al actualizar pago:', error)
+      throw error
+    }
   },
 
   // Eliminar venta
