@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,9 +14,10 @@ import {
   Dimensions,
 } from "react-native";
 import { router } from "expo-router";
+import { supabase, ventasService, subscribeToVentas } from "../supabase";
 import logo from "../assets/images/logo.jpg";
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const nowISO = () => new Date().toISOString();
@@ -41,6 +42,39 @@ export default function Index() {
   const [metodoPago, setMetodoPago] = useState("Efectivo");
 
   const [carrito, setCarrito] = useState([]);
+
+  // --- Supabase: mapeo y carga inicial ---
+  const mapRowToVenta = (row) => ({
+    id: row?.identificacion ?? row?.id ?? uid(),
+    cliente: row?.cliente ?? "",
+    productos: Array.isArray(row?.productos) ? row.productos : [],
+    metodoPago: row?.metodo_pago ?? row?.metodoPago ?? "Efectivo",
+    fecha: row?.fecha ?? nowISO(),
+    pagado: !!row?.pagado,
+  });
+
+  useEffect(() => {
+    let channel;
+    (async () => {
+      try {
+        const data = await ventasService.getAllVentas();
+        setVentas(data.map(mapRowToVenta));
+      } catch (e) {
+        console.warn("Supabase: no se pudieron cargar ventas:", e?.message);
+      }
+
+      // Suscripción en tiempo real
+      channel = subscribeToVentas(async () => {
+        try {
+          const data = await ventasService.getAllVentas();
+          setVentas(data.map(mapRowToVenta));
+        } catch {}
+      });
+    })();
+    return () => {
+      try { channel && supabase.removeChannel(channel); } catch {}
+    };
+  }, []);
 
   const totalDelDia = useMemo(() => {
     return ventas
@@ -89,7 +123,7 @@ export default function Index() {
     setCarrito([]);
   };
 
-  const finalizarVenta = () => {
+  const finalizarVenta = async () => {
     if (!cliente.trim()) {
       Alert.alert(
         "Falta nombre",
@@ -102,16 +136,20 @@ export default function Index() {
       return;
     }
 
-    const nuevaVenta = {
-      id: uid(),
-      cliente: cliente.trim(),
-      productos: carrito,
-      metodoPago,
-      fecha: nowISO(),
-      pagado: false,
-    };
-
-    setVentas((prev) => [nuevaVenta, ...prev]);
+    try {
+      const created = await ventasService.createVenta({
+        cliente: cliente.trim(),
+        productos: carrito,
+        metodo_pago: metodoPago,
+        pagado: false,
+      });
+      const nuevaVenta = mapRowToVenta(created);
+      setVentas((prev) => [nuevaVenta, ...prev]);
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Supabase", "No se pudo guardar la venta en la base de datos");
+      return;
+    }
 
     // limpiar form y carrito
     setCliente("");
@@ -119,10 +157,13 @@ export default function Index() {
     setMetodoPago("Efectivo");
   };
 
-  const marcarPagado = (id) => {
-    setVentas((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, pagado: true } : v))
-    );
+  const marcarPagado = async (id) => {
+    try {
+      await ventasService.updatePagado(id, true);
+      setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
+    } catch (_e) {
+      Alert.alert("Supabase", "No se pudo actualizar el estado de pago");
+    }
   };
 
   const eliminarVenta = (id) => {
@@ -131,7 +172,14 @@ export default function Index() {
       {
         text: "Eliminar",
         style: "destructive",
-        onPress: () => setVentas((prev) => prev.filter((v) => v.id !== id)),
+        onPress: async () => {
+          try {
+            await ventasService.deleteVenta(id);
+            setVentas((prev) => prev.filter((v) => v.id !== id));
+          } catch (_e) {
+            Alert.alert("Supabase", "No se pudo eliminar la venta");
+          }
+        },
       },
     ]);
   };
