@@ -54,24 +54,28 @@ Escanea el QR con Expo Go en tu teléfono.
 
 ## Supabase
 
-Tabla `public.ventas` (campos sugeridos):
+### Configuración de la base de datos
 
-- `identificacion` uuid (PK, default uuid_generate_v4())
-- `cliente` text
-- `productos` jsonb
-- `metodo_pago` text
-- `fecha` timestamptz
-- `pagado` boolean
+**Paso 1:** En tu proyecto de Supabase, ve a **SQL Editor** y ejecuta el script `supabase-setup.sql` incluido en este repo. Esto creará/configurará:
 
-Políticas RLS (modo abierto para prototipo):
+- Tabla `public.ventas` con el esquema correcto
+- Políticas RLS para permitir operaciones desde la app (rol anon)
+- Verificaciones del esquema
 
-```sql
-CREATE POLICY "Enable all operations" ON public.ventas
-AS PERMISSIVE FOR ALL
-TO public
-USING (true)
-WITH CHECK (true);
-```
+**Paso 2:** Si ya tienes la tabla creada, ejecuta solo las secciones de políticas del script.
+
+### Esquema de la tabla `public.ventas`:
+
+- `identificacion` uuid (PK, default gen_random_uuid())
+- `cliente` text NOT NULL
+- `productos` jsonb NOT NULL
+- `metodo_pago` text NOT NULL (default 'Efectivo')
+- `fecha` timestamptz NOT NULL (default NOW())
+- `pagado` boolean NOT NULL (default false)
+
+**Nota importante sobre seguridad:**
+Las políticas actuales permiten acceso completo sin autenticación (desarrollo/prototipo).
+Para producción, deberás implementar autenticación y restringir las políticas RLS.
 
 ## Publicar
 
