@@ -291,12 +291,7 @@ export default function Index() {
         {/* Botón para ver clientes */}
         <TouchableOpacity
           style={[styles.btnBlue, { marginTop: 12 }]}
-          onPress={() =>
-            router.push({
-              pathname: "/cli",
-              params: { ventas: JSON.stringify(ventas) },
-            })
-          }
+          onPress={() => router.push("/cli")}
         >
           <Text style={styles.btnText}>👥 Ver clientes registrados</Text>
         </TouchableOpacity>
