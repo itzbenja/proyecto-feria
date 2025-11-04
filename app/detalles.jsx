@@ -86,7 +86,22 @@ export default function Detalles() {
               <View style={styles.ventaCard}>
                 <View style={styles.ventaHeader}>
                   <Text style={styles.ventaFecha}>📅 {formatFecha(item.fecha)}</Text>
-                  <Text style={styles.ventaMetodo}>💳 {item.metodo_pago}</Text>
+                  <View>
+                    {Array.isArray(item.metodo_pago) && item.metodo_pago.length > 1 ? (
+                      <>
+                        <Text style={styles.ventaMetodo}>💳 Pagos mixtos</Text>
+                        {item.metodo_pago.map((pago, idx) => (
+                          <Text key={idx} style={styles.ventaMetodoDetalle}>
+                            • {pago.metodo}: ${pago.monto.toFixed(2)}
+                          </Text>
+                        ))}
+                      </>
+                    ) : (
+                      <Text style={styles.ventaMetodo}>
+                        💳 {Array.isArray(item.metodo_pago) ? item.metodo_pago[0]?.metodo : item.metodo_pago}
+                      </Text>
+                    )}
+                  </View>
                 </View>
                 
                 <View style={styles.productosContainer}>
@@ -179,6 +194,12 @@ const styles = StyleSheet.create({
   ventaMetodo: {
     fontSize: 14,
     color: "#64748b",
+  },
+  ventaMetodoDetalle: {
+    fontSize: 12,
+    color: "#64748b",
+    marginLeft: 8,
+    marginTop: 2,
   },
   productosContainer: {
     marginBottom: 12,

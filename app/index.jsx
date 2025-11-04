@@ -39,18 +39,32 @@ export default function Index() {
   const [cantidad, setCantidad] = useState("");
   const [precio, setPrecio] = useState("");
   const [metodoPago, setMetodoPago] = useState("Efectivo");
+  const [montoPago, setMontoPago] = useState("");
+  const [pagosMixtos, setPagosMixtos] = useState([]);
 
   const [carrito, setCarrito] = useState([]);
 
   // --- Supabase: mapeo y carga inicial ---
-  const mapRowToVenta = (row) => ({
-    id: row?.identificacion ?? row?.id ?? uid(),
-    cliente: row?.cliente ?? "",
-    productos: Array.isArray(row?.productos) ? row.productos : [],
-    metodoPago: row?.metodo_pago ?? "Efectivo",
-    fecha: row?.fecha ?? nowISO(),
-    pagado: !!row?.pagado,
-  });
+  const mapRowToVenta = (row) => {
+    // Soportar tanto formato antiguo (string) como nuevo (array)
+    let metodosPago = [];
+    if (Array.isArray(row?.metodo_pago)) {
+      metodosPago = row.metodo_pago;
+    } else if (typeof row?.metodo_pago === 'string') {
+      // Formato antiguo: convertir a array
+      const total = row.productos?.reduce((sum, p) => sum + p.cantidad * p.precio, 0) || 0;
+      metodosPago = [{ metodo: row.metodo_pago, monto: total }];
+    }
+
+    return {
+      id: row?.identificacion ?? row?.id ?? uid(),
+      cliente: row?.cliente ?? "",
+      productos: Array.isArray(row?.productos) ? row.productos : [],
+      metodoPago: metodosPago,
+      fecha: row?.fecha ?? nowISO(),
+      pagado: !!row?.pagado,
+    };
+  };
 
   useEffect(() => {
     let channel;
@@ -120,6 +134,38 @@ export default function Index() {
 
   const cancelarCarrito = () => {
     setCarrito([]);
+    setPagosMixtos([]);
+  };
+
+  const agregarPago = () => {
+    const monto = parseFloat(montoPago);
+    if (!monto || monto <= 0) {
+      Alert.alert("Monto inválido", "Ingresa un monto válido para el pago.");
+      return;
+    }
+
+    const totalCarrito = carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
+    const totalPagado = pagosMixtos.reduce((sum, p) => sum + p.monto, 0);
+    const restante = totalCarrito - totalPagado;
+
+    if (monto > restante) {
+      Alert.alert(
+        "Monto excedido",
+        `El monto no puede ser mayor al restante: $${restante.toFixed(2)}`
+      );
+      return;
+    }
+
+    setPagosMixtos((prev) => [
+      ...prev,
+      { id: uid(), metodo: metodoPago, monto },
+    ]);
+    setMontoPago("");
+    setMetodoPago("Efectivo");
+  };
+
+  const eliminarPago = (id) => {
+    setPagosMixtos((prev) => prev.filter((p) => p.id !== id));
   };
 
   const finalizarVenta = async () => {
@@ -135,11 +181,28 @@ export default function Index() {
       return;
     }
 
+    const totalCarrito = carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
+    const totalPagado = pagosMixtos.reduce((sum, p) => sum + p.monto, 0);
+
+    // Si no hay pagos mixtos agregados, usar el método simple
+    let metodosPagoFinal = pagosMixtos.length > 0 
+      ? pagosMixtos.map(p => ({ metodo: p.metodo, monto: p.monto }))
+      : [{ metodo: metodoPago, monto: totalCarrito }];
+
+    // Validar que el total de pagos mixtos coincida
+    if (pagosMixtos.length > 0 && Math.abs(totalPagado - totalCarrito) > 0.01) {
+      Alert.alert(
+        "Pago incompleto",
+        `Falta pagar: $${(totalCarrito - totalPagado).toFixed(2)}\nTotal: $${totalCarrito.toFixed(2)}\nPagado: $${totalPagado.toFixed(2)}`
+      );
+      return;
+    }
+
     try {
       const created = await ventasService.createVenta({
         cliente: cliente.trim(),
         productos: carrito,
-        metodo_pago: metodoPago,
+        metodo_pago: metodosPagoFinal,
         pagado: false
       });
       const nuevaVenta = mapRowToVenta(created);
@@ -155,7 +218,9 @@ export default function Index() {
     // limpiar form y carrito
     setCliente("");
     setCarrito([]);
+    setPagosMixtos([]);
     setMetodoPago("Efectivo");
+    setMontoPago("");
   };
 
   const marcarPagado = async (id) => {
@@ -288,6 +353,79 @@ export default function Index() {
           ))}
         </View>
 
+        {/* Pagos mixtos */}
+        {carrito.length > 0 && (
+          <>
+            <View style={styles.pagoMixtoHeader}>
+              <Text style={styles.label}>💰 Pagos mixtos (opcional)</Text>
+              <Text style={styles.pagoHelper}>
+                Deja vacío para pago simple
+              </Text>
+            </View>
+
+            <View style={styles.row}>
+              <TextInput
+                placeholder="Monto"
+                value={montoPago}
+                onChangeText={setMontoPago}
+                keyboardType="numeric"
+                style={[styles.input, styles.inputHalf]}
+              />
+              <TouchableOpacity
+                style={[styles.btnYellow, { flex: 1, marginLeft: 8 }]}
+                onPress={agregarPago}
+              >
+                <Text style={styles.btnText}>➕ Agregar pago</Text>
+              </TouchableOpacity>
+            </View>
+
+            {pagosMixtos.length > 0 && (
+              <View style={styles.pagosContainer}>
+                <Text style={styles.pagosTitle}>
+                  💳 Pagos agregados ({pagosMixtos.length})
+                </Text>
+                {pagosMixtos.map((pago) => (
+                  <View key={pago.id} style={styles.pagoRow}>
+                    <Text style={styles.pagoText}>
+                      {pago.metodo}: ${pago.monto.toFixed(2)}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.pagoRemove}
+                      onPress={() => eliminarPago(pago.id)}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 12 }}>✖</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <View style={styles.pagoTotalRow}>
+                  <Text style={styles.pagoTotalLabel}>Total pagado:</Text>
+                  <Text style={styles.pagoTotalValue}>
+                    ${pagosMixtos.reduce((sum, p) => sum + p.monto, 0).toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.pagoTotalRow}>
+                  <Text style={styles.pagoTotalLabel}>Total carrito:</Text>
+                  <Text style={styles.pagoTotalValue}>
+                    ${carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0).toFixed(2)}
+                  </Text>
+                </View>
+                {Math.abs(
+                  carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0) -
+                  pagosMixtos.reduce((sum, p) => sum + p.monto, 0)
+                ) > 0.01 && (
+                  <Text style={styles.pagoRestante}>
+                    Restante: $
+                    {(
+                      carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0) -
+                      pagosMixtos.reduce((sum, p) => sum + p.monto, 0)
+                    ).toFixed(2)}
+                  </Text>
+                )}
+              </View>
+            )}
+          </>
+        )}
+
         {/* Botón para ver clientes */}
         <TouchableOpacity
           style={[styles.btnBlue, { marginTop: 12 }]}
@@ -353,7 +491,22 @@ export default function Index() {
               ))}
 
               <View style={styles.rowBetween}>
-                <Text style={styles.salePayment}>💳 {item.metodoPago}</Text>
+                <View>
+                  {Array.isArray(item.metodoPago) && item.metodoPago.length > 1 ? (
+                    <>
+                      <Text style={styles.salePayment}>💳 Pagos mixtos:</Text>
+                      {item.metodoPago.map((pago, idx) => (
+                        <Text key={idx} style={styles.salePaymentDetail}>
+                          • {pago.metodo}: ${pago.monto.toFixed(2)}
+                        </Text>
+                      ))}
+                    </>
+                  ) : (
+                    <Text style={styles.salePayment}>
+                      💳 {Array.isArray(item.metodoPago) ? item.metodoPago[0]?.metodo : item.metodoPago}
+                    </Text>
+                  )}
+                </View>
                 <Text style={styles.saleTotal}>Total: ${total.toFixed(2)}</Text>
               </View>
 
@@ -647,6 +800,76 @@ const styles = StyleSheet.create({
     color: "#fff", 
     fontWeight: "800",
     fontSize: 14,
+  },
+
+  // Estilos para pagos mixtos
+  pagoMixtoHeader: {
+    marginTop: 12,
+  },
+  pagoHelper: {
+    fontSize: 12,
+    color: "#64748b",
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  pagosContainer: {
+    backgroundColor: "#fef3c7",
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  pagosTitle: {
+    fontWeight: "700",
+    color: "#92400e",
+    marginBottom: 8,
+  },
+  pagoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  pagoText: {
+    color: "#374151",
+    fontWeight: "600",
+  },
+  pagoRemove: {
+    backgroundColor: "#ef4444",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  pagoTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#fde68a",
+  },
+  pagoTotalLabel: {
+    fontWeight: "600",
+    color: "#92400e",
+  },
+  pagoTotalValue: {
+    fontWeight: "800",
+    color: "#16a34a",
+    fontSize: 16,
+  },
+  pagoRestante: {
+    marginTop: 6,
+    fontWeight: "700",
+    color: "#dc2626",
+    textAlign: "center",
+  },
+  salePaymentDetail: {
+    fontSize: 12,
+    color: "#64748b",
+    marginLeft: 8,
+    marginTop: 2,
   },
 
   empty: { textAlign: "center", marginTop: 20, color: "#64748b" },
