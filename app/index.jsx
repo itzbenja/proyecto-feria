@@ -185,8 +185,8 @@ export default function Index() {
     ]);
   };
 
-  // Componente de encabezado que incluye formulario y resumen
-  const renderHeader = () => (
+  // Memoizar el header para evitar re-renders que cierren el teclado
+  const headerComponent = useMemo(() => (
     <>
       {/* LOGO */}
       <View style={styles.logoWrap}>
@@ -321,7 +321,8 @@ export default function Index() {
       {/* HISTORIAL */}
       <Text style={styles.sectionTitle}>🕘 Historial de ventas</Text>
     </>
-  );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [cliente, producto, cantidad, precio, carrito, metodoPago, numeroVentasDelDia, totalDelDia]);
 
   return (
     <KeyboardAvoidingView 
@@ -332,7 +333,7 @@ export default function Index() {
       <FlatList
         data={ventas}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={headerComponent}
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
         removeClippedSubviews={false}
