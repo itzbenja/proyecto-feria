@@ -264,6 +264,7 @@ export default function Index() {
       <View style={styles.card}>
         <TextInput
           placeholder="Nombre del cliente"
+          placeholderTextColor="#9ca3af"
           value={cliente}
           onChangeText={setCliente}
           style={styles.input}
@@ -271,6 +272,7 @@ export default function Index() {
 
         <TextInput
           placeholder="Producto"
+          placeholderTextColor="#9ca3af"
           value={producto}
           onChangeText={setProducto}
           style={styles.input}
@@ -279,6 +281,7 @@ export default function Index() {
         <View style={styles.row}>
           <TextInput
             placeholder="Cantidad"
+            placeholderTextColor="#9ca3af"
             value={cantidad}
             onChangeText={setCantidad}
             keyboardType="numeric"
@@ -286,6 +289,7 @@ export default function Index() {
           />
           <TextInput
             placeholder="Precio x unidad"
+            placeholderTextColor="#9ca3af"
             value={precio}
             onChangeText={setPrecio}
             keyboardType="numeric"
@@ -366,10 +370,11 @@ export default function Index() {
             <View style={styles.row}>
               <TextInput
                 placeholder="Monto"
+                placeholderTextColor="#9ca3af"
                 value={montoPago}
                 onChangeText={setMontoPago}
                 keyboardType="numeric"
-                style={[styles.input, styles.inputHalf]}
+                style={[styles.input, styles.inputHalf, { color: '#000' }]}
               />
               <TouchableOpacity
                 style={[styles.btnYellow, { flex: 1, marginLeft: 8 }]}
