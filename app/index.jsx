@@ -589,6 +589,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 16,
     minHeight: 50,
+    color: "#111", // Color del texto
   },
   row: { 
     flexDirection: "row", 
