@@ -374,7 +374,12 @@ export default function Index() {
                 value={montoPago}
                 onChangeText={setMontoPago}
                 keyboardType="numeric"
-                style={[styles.input, styles.inputHalf, { color: '#000' }]}
+                selectionColor="#000"
+                style={[styles.input, styles.inputHalf, { 
+                  color: '#000', 
+                  backgroundColor: '#fff',
+                  fontWeight: '600'
+                }]}
               />
               <TouchableOpacity
                 style={[styles.btnYellow, { flex: 1, marginLeft: 8 }]}
@@ -592,9 +597,10 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#fff",
     marginBottom: 12,
-    fontSize: 16,
+    fontSize: 18,
     minHeight: 50,
-    color: "#111", // Color del texto
+    color: "#000", // Negro puro
+    fontWeight: "600",
   },
   row: { 
     flexDirection: "row", 
