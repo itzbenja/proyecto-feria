@@ -17,9 +17,6 @@ const MontoInput = memo(function MontoInput({ value, onChange, placeholder = 'Mo
         allowFontScaling={false}
         style={styles.input}
       />
-      {value ? (
-        <Text style={styles.helper}>Valor: ${value}</Text>
-      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
@@ -38,12 +35,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
     minHeight: 54,
-  },
-  helper: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#16a34a',
-    fontWeight: '700'
   },
   error: {
     marginTop: 4,
