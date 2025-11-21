@@ -12,7 +12,6 @@ import {
   Platform,
   Dimensions,
 } from "react-native";
-import MontoInput from "../components/MontoInput";
 import { router } from "expo-router";
 import { supabase, ventasService, subscribeToVentas } from "../supabase";
 import logo from "../assets/images/logo.jpg";
@@ -40,28 +39,16 @@ export default function Index() {
   const [cantidad, setCantidad] = useState("");
   const [precio, setPrecio] = useState("");
   const [metodoPago, setMetodoPago] = useState("Efectivo");
-  const [montoPago, setMontoPago] = useState("");
-  const [pagosMixtos, setPagosMixtos] = useState([]);
 
   const [carrito, setCarrito] = useState([]);
 
   // --- Supabase: mapeo y carga inicial ---
   const mapRowToVenta = (row) => {
-    // Soportar tanto formato antiguo (string) como nuevo (array)
-    let metodosPago = [];
-    if (Array.isArray(row?.metodo_pago)) {
-      metodosPago = row.metodo_pago;
-    } else if (typeof row?.metodo_pago === 'string') {
-      // Formato antiguo: convertir a array
-      const total = row.productos?.reduce((sum, p) => sum + p.cantidad * p.precio, 0) || 0;
-      metodosPago = [{ metodo: row.metodo_pago, monto: total }];
-    }
-
     return {
       id: row?.identificacion ?? row?.id ?? uid(),
       cliente: row?.cliente ?? "",
       productos: Array.isArray(row?.productos) ? row.productos : [],
-      metodoPago: metodosPago,
+      metodoPago: row?.metodo_pago ?? "Efectivo",
       fecha: row?.fecha ?? nowISO(),
       pagado: !!row?.pagado,
     };
@@ -135,38 +122,6 @@ export default function Index() {
 
   const cancelarCarrito = () => {
     setCarrito([]);
-    setPagosMixtos([]);
-  };
-
-  const agregarPago = () => {
-    const monto = parseFloat(montoPago);
-    if (!monto || monto <= 0) {
-      Alert.alert("Monto inválido", "Ingresa un monto válido para el pago.");
-      return;
-    }
-
-    const totalCarrito = carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
-    const totalPagado = pagosMixtos.reduce((sum, p) => sum + p.monto, 0);
-    const restante = totalCarrito - totalPagado;
-
-    if (monto > restante) {
-      Alert.alert(
-        "Monto excedido",
-        `El monto no puede ser mayor al restante: $${restante.toFixed(2)}`
-      );
-      return;
-    }
-
-    setPagosMixtos((prev) => [
-      ...prev,
-      { id: uid(), metodo: metodoPago, monto },
-    ]);
-    setMontoPago("");
-    setMetodoPago("Efectivo");
-  };
-
-  const eliminarPago = (id) => {
-    setPagosMixtos((prev) => prev.filter((p) => p.id !== id));
   };
 
   const finalizarVenta = async () => {
@@ -182,28 +137,11 @@ export default function Index() {
       return;
     }
 
-    const totalCarrito = carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
-    const totalPagado = pagosMixtos.reduce((sum, p) => sum + p.monto, 0);
-
-    // Si no hay pagos mixtos agregados, usar el método simple
-    let metodosPagoFinal = pagosMixtos.length > 0 
-      ? pagosMixtos.map(p => ({ metodo: p.metodo, monto: p.monto }))
-      : [{ metodo: metodoPago, monto: totalCarrito }];
-
-    // Validar que el total de pagos mixtos coincida
-    if (pagosMixtos.length > 0 && Math.abs(totalPagado - totalCarrito) > 0.01) {
-      Alert.alert(
-        "Pago incompleto",
-        `Falta pagar: $${(totalCarrito - totalPagado).toFixed(2)}\nTotal: $${totalCarrito.toFixed(2)}\nPagado: $${totalPagado.toFixed(2)}`
-      );
-      return;
-    }
-
     try {
       const created = await ventasService.createVenta({
         cliente: cliente.trim(),
         productos: carrito,
-        metodo_pago: metodosPagoFinal,
+        metodo_pago: metodoPago,
         pagado: false
       });
       const nuevaVenta = mapRowToVenta(created);
@@ -219,9 +157,7 @@ export default function Index() {
     // limpiar form y carrito
     setCliente("");
     setCarrito([]);
-    setPagosMixtos([]);
     setMetodoPago("Efectivo");
-    setMontoPago("");
   };
 
   const marcarPagado = async (id) => {
@@ -357,76 +293,6 @@ export default function Index() {
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Pagos mixtos */}
-        {carrito.length > 0 && (
-          <>
-            <View style={styles.pagoMixtoHeader}>
-              <Text style={styles.label}>💰 Pagos mixtos (opcional)</Text>
-              <Text style={styles.pagoHelper}>
-                Deja vacío para pago simple
-              </Text>
-            </View>
-
-            <View style={styles.row}>
-              <MontoInput
-                value={montoPago}
-                onChange={setMontoPago}
-              />
-              <TouchableOpacity
-                style={[styles.btnYellow, { flex: 1 }]}
-                onPress={agregarPago}
-              >
-                <Text style={styles.btnText}>➕ Agregar pago</Text>
-              </TouchableOpacity>
-            </View>
-
-            {pagosMixtos.length > 0 && (
-              <View style={styles.pagosContainer}>
-                <Text style={styles.pagosTitle}>
-                  💳 Pagos agregados ({pagosMixtos.length})
-                </Text>
-                {pagosMixtos.map((pago) => (
-                  <View key={pago.id} style={styles.pagoRow}>
-                    <Text style={styles.pagoText}>
-                      {pago.metodo}: ${pago.monto.toFixed(2)}
-                    </Text>
-                    <TouchableOpacity
-                      style={styles.pagoRemove}
-                      onPress={() => eliminarPago(pago.id)}
-                    >
-                      <Text style={{ color: "#fff", fontSize: 12 }}>✖</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <View style={styles.pagoTotalRow}>
-                  <Text style={styles.pagoTotalLabel}>Total pagado:</Text>
-                  <Text style={styles.pagoTotalValue}>
-                    ${pagosMixtos.reduce((sum, p) => sum + p.monto, 0).toFixed(2)}
-                  </Text>
-                </View>
-                <View style={styles.pagoTotalRow}>
-                  <Text style={styles.pagoTotalLabel}>Total carrito:</Text>
-                  <Text style={styles.pagoTotalValue}>
-                    ${carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0).toFixed(2)}
-                  </Text>
-                </View>
-                {Math.abs(
-                  carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0) -
-                  pagosMixtos.reduce((sum, p) => sum + p.monto, 0)
-                ) > 0.01 && (
-                  <Text style={styles.pagoRestante}>
-                    Restante: $
-                    {(
-                      carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0) -
-                      pagosMixtos.reduce((sum, p) => sum + p.monto, 0)
-                    ).toFixed(2)}
-                  </Text>
-                )}
-              </View>
-            )}
-          </>
-        )}
 
         {/* Botón para ver clientes */}
         <TouchableOpacity

@@ -86,22 +86,9 @@ export default function Detalles() {
               <View style={styles.ventaCard}>
                 <View style={styles.ventaHeader}>
                   <Text style={styles.ventaFecha}>📅 {formatFecha(item.fecha)}</Text>
-                  <View>
-                    {Array.isArray(item.metodo_pago) && item.metodo_pago.length > 1 ? (
-                      <>
-                        <Text style={styles.ventaMetodo}>💳 Pagos mixtos</Text>
-                        {item.metodo_pago.map((pago, idx) => (
-                          <Text key={idx} style={styles.ventaMetodoDetalle}>
-                            • {pago.metodo}: ${pago.monto.toFixed(2)}
-                          </Text>
-                        ))}
-                      </>
-                    ) : (
-                      <Text style={styles.ventaMetodo}>
-                        💳 {Array.isArray(item.metodo_pago) ? item.metodo_pago[0]?.metodo : item.metodo_pago}
-                      </Text>
-                    )}
-                  </View>
+                  <Text style={styles.ventaMetodo}>
+                    💳 {item.metodo_pago || "Efectivo"}
+                  </Text>
                 </View>
                 
                 <View style={styles.productosContainer}>
