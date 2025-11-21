@@ -368,21 +368,43 @@ export default function Index() {
             </View>
 
             <View style={styles.row}>
-              <TextInput
-                placeholder="Monto"
-                placeholderTextColor="#9ca3af"
-                value={montoPago}
-                onChangeText={setMontoPago}
-                keyboardType="numeric"
-                selectionColor="#000"
-                style={[styles.input, styles.inputHalf, { 
-                  color: '#000', 
-                  backgroundColor: '#fff',
-                  fontWeight: '600'
-                }]}
-              />
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <TextInput
+                  placeholder="Monto $"
+                  placeholderTextColor="#94a3b8"
+                  value={montoPago}
+                  onChangeText={(text) => {
+                    console.log('Escribiendo:', text);
+                    setMontoPago(text);
+                  }}
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                  underlineColorAndroid="transparent"
+                  style={{
+                    borderWidth: 2,
+                    borderColor: '#22c55e',
+                    borderRadius: 12,
+                    padding: 16,
+                    backgroundColor: '#ffffff',
+                    fontSize: 20,
+                    fontWeight: 'bold',
+                    color: '#000000',
+                    minHeight: 50,
+                  }}
+                />
+                {montoPago ? (
+                  <Text style={{ 
+                    marginTop: 4, 
+                    fontSize: 14, 
+                    color: '#16a34a',
+                    fontWeight: 'bold'
+                  }}>
+                    Valor: ${montoPago}
+                  </Text>
+                ) : null}
+              </View>
               <TouchableOpacity
-                style={[styles.btnYellow, { flex: 1, marginLeft: 8 }]}
+                style={[styles.btnYellow, { flex: 1 }]}
                 onPress={agregarPago}
               >
                 <Text style={styles.btnText}>➕ Agregar pago</Text>
