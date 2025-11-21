@@ -12,6 +12,7 @@ import {
   Platform,
   Dimensions,
 } from "react-native";
+import MontoInput from "../components/MontoInput";
 import { router } from "expo-router";
 import { supabase, ventasService, subscribeToVentas } from "../supabase";
 import logo from "../assets/images/logo.jpg";
@@ -368,41 +369,10 @@ export default function Index() {
             </View>
 
             <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <TextInput
-                  placeholder="Monto $"
-                  placeholderTextColor="#94a3b8"
-                  value={montoPago}
-                  onChangeText={(text) => {
-                    console.log('Escribiendo:', text);
-                    setMontoPago(text);
-                  }}
-                  keyboardType="numeric"
-                  returnKeyType="done"
-                  underlineColorAndroid="transparent"
-                  style={{
-                    borderWidth: 2,
-                    borderColor: '#22c55e',
-                    borderRadius: 12,
-                    padding: 16,
-                    backgroundColor: '#ffffff',
-                    fontSize: 20,
-                    fontWeight: 'bold',
-                    color: '#000000',
-                    minHeight: 50,
-                  }}
-                />
-                {montoPago ? (
-                  <Text style={{ 
-                    marginTop: 4, 
-                    fontSize: 14, 
-                    color: '#16a34a',
-                    fontWeight: 'bold'
-                  }}>
-                    Valor: ${montoPago}
-                  </Text>
-                ) : null}
-              </View>
+              <MontoInput
+                value={montoPago}
+                onChange={setMontoPago}
+              />
               <TouchableOpacity
                 style={[styles.btnYellow, { flex: 1 }]}
                 onPress={agregarPago}
