@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ventasService } from "../supabase";
+import { formatMoney } from "../utils/formatters";
+import { ticketsService } from "../utils/tickets";
+import TicketModal from "../components/TicketModal";
 
 export default function Detalles() {
   const router = useRouter();
@@ -9,6 +12,14 @@ export default function Detalles() {
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalGastado, setTotalGastado] = useState(0);
+
+  // Estado para selección múltiple
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+
+  // Estado para modal de ticket (imagen)
+  const [ticketModalVisible, setTicketModalVisible] = useState(false);
+  const [selectedVentasForTicket, setSelectedVentasForTicket] = useState([]);
 
   useEffect(() => {
     cargarHistorialCliente();
@@ -19,7 +30,7 @@ export default function Detalles() {
     try {
       const todasVentas = await ventasService.getAllVentas();
       const ventasCliente = todasVentas.filter((v) => v.cliente === cliente);
-      
+
       // Calcular total gastado
       const total = ventasCliente.reduce((acc, venta) => {
         const totalVenta = venta.productos.reduce(
@@ -40,13 +51,57 @@ export default function Detalles() {
 
   const formatFecha = (iso) => {
     const fecha = new Date(iso);
-    return fecha.toLocaleString('es-ES', { 
-      day: '2-digit', 
-      month: 'short', 
+    return fecha.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: 'short',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const toggleSelection = (id) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+
+    // Si no hay nada seleccionado, salir del modo selección
+    if (newSelected.size === 0) {
+      setIsSelectionMode(false);
+    } else {
+      setIsSelectionMode(true);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === ventas.length) {
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+    } else {
+      const allIds = new Set(ventas.map(v => v.id));
+      setSelectedIds(allIds);
+      setIsSelectionMode(true);
+    }
+  };
+
+  const shareSelected = async () => {
+    if (selectedIds.size === 0) return;
+
+    try {
+      const selectedVentas = ventas.filter(v => selectedIds.has(v.id));
+      setSelectedVentasForTicket(selectedVentas);
+      setTicketModalVisible(true);
+
+      // Limpiar selección después de compartir (opcional, quizás mejor hacerlo al cerrar el modal)
+      // setSelectedIds(new Set());
+      // setIsSelectionMode(false);
+    } catch (error) {
+      Alert.alert("Error", "No se pudieron generar las boletas");
+    }
   };
 
   if (loading) {
@@ -60,16 +115,35 @@ export default function Detalles() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.header}>📦 Historial de {cliente}</Text>
-      
+      <View style={styles.headerRow}>
+        <Text style={styles.header}>📦 Historial de {cliente}</Text>
+
+        {ventas.length > 0 && (
+          <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllBtn}>
+            <Text style={styles.selectAllText}>
+              {selectedIds.size === ventas.length ? "Deseleccionar" : "Seleccionar Todo"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={styles.resumen}>
         <Text style={styles.resumenText}>
           🛒 Total de compras: {ventas.length}
         </Text>
         <Text style={styles.resumenTotal}>
-          💰 Total gastado: ${totalGastado.toFixed(2)}
+          💰 Total gastado: {formatMoney(totalGastado)}
         </Text>
       </View>
+
+      {/* Botón flotante para compartir seleccionados */}
+      {selectedIds.size > 0 && (
+        <TouchableOpacity style={styles.shareFloatingBtn} onPress={shareSelected}>
+          <Text style={styles.shareFloatingText}>
+            📄 Compartir ({selectedIds.size})
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {ventas.length === 0 ? (
         <Text style={styles.empty}>No tiene compras registradas.</Text>
@@ -77,30 +151,43 @@ export default function Detalles() {
         <FlatList
           data={ventas}
           keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: 100 }}
           renderItem={({ item }) => {
             const totalVenta = item.productos.reduce(
               (sum, p) => sum + p.cantidad * p.precio,
               0
             );
+            const isSelected = selectedIds.has(item.id);
+
             return (
-              <View style={styles.ventaCard}>
+              <TouchableOpacity
+                style={[styles.ventaCard, isSelected && styles.ventaCardSelected]}
+                onPress={() => toggleSelection(item.id)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.ventaHeader}>
-                  <Text style={styles.ventaFecha}>📅 {formatFecha(item.fecha)}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {/* Checkbox visual */}
+                    <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                    </View>
+                    <Text style={styles.ventaFecha}>📅 {formatFecha(item.fecha)}</Text>
+                  </View>
                   <Text style={styles.ventaMetodo}>
                     💳 {item.metodo_pago || "Efectivo"}
                   </Text>
                 </View>
-                
+
                 <View style={styles.productosContainer}>
                   {item.productos.map((p) => (
                     <Text key={p.id} style={styles.productoItem}>
-                      • {p.producto} ({p.cantidad} x ${p.precio.toFixed(2)})
+                      • {p.producto} ({p.cantidad} x {formatMoney(p.precio)})
                     </Text>
                   ))}
                 </View>
-                
+
                 <View style={styles.ventaFooter}>
-                  <Text style={styles.ventaTotal}>Total: ${totalVenta.toFixed(2)}</Text>
+                  <Text style={styles.ventaTotal}>Total: {formatMoney(totalVenta)}</Text>
                   {item.pagado ? (
                     <View style={styles.pagadoBadge}>
                       <Text style={styles.pagadoText}>✅ Pagado</Text>
@@ -111,7 +198,7 @@ export default function Detalles() {
                     </View>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
         />
@@ -120,18 +207,40 @@ export default function Detalles() {
       <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
         <Text style={styles.backText}>⬅ Volver</Text>
       </TouchableOpacity>
+      <TicketModal
+        visible={ticketModalVisible}
+        onClose={() => {
+          setTicketModalVisible(false);
+          // Limpiar selección al cerrar el modal si se desea
+          setSelectedIds(new Set());
+          setIsSelectionMode(false);
+        }}
+        ventas={selectedVentasForTicket}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#f0fdf4", padding: 12 },
-  header: { 
-    fontSize: 22, 
-    fontWeight: "800", 
-    color: "#065f46", 
-    marginBottom: 16, 
-    textAlign: "center" 
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#065f46",
+    flex: 1,
+  },
+  selectAllBtn: {
+    padding: 8,
+  },
+  selectAllText: {
+    color: "#16a34a",
+    fontWeight: "600",
   },
   resumen: {
     backgroundColor: "#ecfdf5",
@@ -165,6 +274,30 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  ventaCardSelected: {
+    borderColor: "#16a34a",
+    backgroundColor: "#f0fdf4",
+    borderWidth: 2,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#cbd5e1",
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: "#16a34a",
+    borderColor: "#16a34a",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
   ventaHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -181,12 +314,6 @@ const styles = StyleSheet.create({
   ventaMetodo: {
     fontSize: 14,
     color: "#64748b",
-  },
-  ventaMetodoDetalle: {
-    fontSize: 12,
-    color: "#64748b",
-    marginLeft: 8,
-    marginTop: 2,
   },
   productosContainer: {
     marginBottom: 12,
@@ -232,22 +359,38 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 12,
   },
-  empty: { 
-    textAlign: "center", 
-    marginTop: 20, 
+  empty: {
+    textAlign: "center",
+    marginTop: 20,
     color: "#64748b",
     fontSize: 16,
   },
-  backBtn: { 
-    backgroundColor: "#16a34a", 
-    padding: 14, 
-    borderRadius: 10, 
-    alignItems: "center", 
-    marginTop: 20,
+  backBtn: {
+    backgroundColor: "#16a34a",
+    padding: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    position: 'absolute',
+    bottom: 20,
+    left: 12,
+    right: 12,
+    elevation: 5,
   },
-  backText: { 
-    color: "#fff", 
+  backText: {
+    color: "#fff",
     fontWeight: "800",
+    fontSize: 16,
+  },
+  shareFloatingBtn: {
+    backgroundColor: "#607d8b",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  shareFloatingText: {
+    color: "#fff",
+    fontWeight: "700",
     fontSize: 16,
   },
 });

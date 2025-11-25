@@ -14,23 +14,23 @@ if (!hasConfig) {
 }
 
 // Crear cliente de Supabase (usará valores vacíos si no hay config, pero no crasheará)
-export const supabase = hasConfig 
+export const supabase = hasConfig
   ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    })
+    auth: {
+      storage: AsyncStorage,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+  })
   : createClient('https://placeholder.supabase.co', 'placeholder-key', {
-      auth: {
-        storage: AsyncStorage,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    })
+    auth: {
+      storage: AsyncStorage,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+    },
+  })
 
 // Funciones para manejar las ventas
 export const ventasService = {
@@ -113,6 +113,64 @@ export const ventasService = {
       return data[0]
     } catch (error) {
       console.error('Error al actualizar pago:', error)
+      throw error
+    }
+  },
+
+  // Actualizar venta completa (cliente y productos)
+  async updateVenta(ventaId, updates) {
+    try {
+      // 1. Obtener la venta actual para tener los abonos
+      const { data: ventaActual, error: fetchError } = await supabase
+        .from('ventas')
+        .select('abonos')
+        .eq('id', ventaId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // 2. Calcular nuevo total y estado de pago
+      const productos = updates.productos || [];
+      const totalVenta = productos.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
+      const totalAbonado = (ventaActual.abonos || []).reduce((sum, a) => sum + Number(a.monto), 0);
+
+      // Si se marca explícitamente como pagado o si los abonos cubren el total
+      const estaPagado = updates.pagado !== undefined
+        ? updates.pagado
+        : totalAbonado >= totalVenta - 0.01;
+
+      // 3. Actualizar
+      const { data, error } = await supabase
+        .from('ventas')
+        .update({
+          cliente: updates.cliente,
+          productos: productos,
+          pagado: estaPagado
+        })
+        .eq('id', ventaId)
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error('Error al actualizar venta:', error);
+      throw error;
+    }
+  },
+
+  // Actualizar nombre del cliente (Legacy, pero útil para cambios rápidos)
+  async updateVentaCliente(ventaId, nuevoCliente) {
+    try {
+      const { data, error } = await supabase
+        .from('ventas')
+        .update({ cliente: nuevoCliente })
+        .eq('id', ventaId)
+        .select()
+
+      if (error) throw error
+      return data[0]
+    } catch (error) {
+      console.error('Error al actualizar cliente:', error)
       throw error
     }
   },
