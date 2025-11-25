@@ -1,6 +1,9 @@
+/* eslint-env node */
 const sharp = require('sharp');
 const path = require('path');
-const fs = require('fs');
+
+// Obtener __dirname de forma compatible
+const __dirname = path.dirname(require.resolve('./convert-logo.js'));
 
 const inputPath = path.join(__dirname, '../assets/images/logo.jpg');
 const outputPath = path.join(__dirname, '../assets/images/icon.png');
