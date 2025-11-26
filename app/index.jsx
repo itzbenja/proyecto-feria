@@ -883,7 +883,7 @@ export default function Index() {
                     ))}
                     <View style={styles.abonosSummary}>
                       <Text style={styles.abonosAbonado}>Abonado: {formatMoney(totalAbonado)}</Text>
-                      {pendiente > 0.01 && (
+                      {pendiente > 0.01 && !item.pagado && (
                         <Text style={styles.abonosPendiente}>Pendiente: {formatMoney(pendiente)}</Text>
                       )}
                     </View>
