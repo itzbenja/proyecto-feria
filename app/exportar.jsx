@@ -72,8 +72,8 @@ export default function Exportar() {
       const estado = venta.pagado || totalAbonado >= totalVenta - 0.01
         ? "Pagado"
         : totalAbonado > 0
-        ? "Abono"
-        : "Pendiente";
+          ? "Abono"
+          : "Pendiente";
 
       const metodoPago = Array.isArray(venta.metodoPago)
         ? venta.metodoPago.map((p) => `${p.metodo}: $${p.monto}`).join("; ")
@@ -176,15 +176,15 @@ export default function Exportar() {
       ];
 
       const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-      
+
       // Aplicar ancho de columnas
       wsResumen['!cols'] = [{ wch: 35 }, { wch: 25 }];
-      
+
       XLSX.utils.book_append_sheet(wb, wsResumen, "Resumen");
 
       // Hoja 2: Detalle de Ventas
       const wsVentas = XLSX.utils.aoa_to_sheet(datosExcel);
-      
+
       // Aplicar ancho de columnas
       wsVentas['!cols'] = [
         { wch: 15 }, // ID
@@ -219,7 +219,7 @@ export default function Exportar() {
         }
         const total = venta.productos.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
         const abonado = (venta.abonos || []).reduce((sum, a) => sum + Number(a.monto), 0);
-        
+
         clientesMap[venta.cliente].totalVentas += 1;
         clientesMap[venta.cliente].totalGastado += total;
         clientesMap[venta.cliente].totalAbonado += abonado;
@@ -253,16 +253,16 @@ export default function Exportar() {
       XLSX.utils.book_append_sheet(wb, wsClientes, "Por Cliente");
 
       // Generar archivo como base64 directamente
-      const wbout = XLSX.write(wb, { 
-        type: 'base64', 
+      const wbout = XLSX.write(wb, {
+        type: 'base64',
         bookType: 'xlsx'
       });
-      
+
       // Guardar archivo
       const fecha = new Date().toISOString().split('T')[0];
       const filename = `Ventas_${fecha}.xlsx`;
       const fileUri = `${FileSystem.documentDirectory}${filename}`;
-      
+
       // Escribir archivo base64 usando API legacy
       // La API legacy acepta base64 directamente como string
       await FileSystem.writeAsStringAsync(fileUri, wbout, {
@@ -298,8 +298,9 @@ export default function Exportar() {
   }
 
   return (
-    <ScrollView 
-      style={[styles.screen, { paddingBottom: insets.bottom + 12, paddingTop: insets.top }]}
+    <ScrollView
+      style={[styles.screen, { paddingTop: insets.top }]}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.header}>📊 Exportar a Excel</Text>
