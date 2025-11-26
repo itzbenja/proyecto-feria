@@ -412,11 +412,37 @@ export default function Index() {
   };
 
   const marcarPagado = async (id) => {
-    try {
-      await ventasService.updatePagado(id, true);
-      setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
-    } catch (_e) {
-      Alert.alert("Supabase", "No se pudo actualizar el estado de pago");
+    const venta = ventas.find((v) => v.id === id);
+    if (!venta) return;
+
+    const total = venta.productos.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
+    const totalAbonado = (venta.abonos || []).reduce((sum, a) => sum + Number(a.monto), 0);
+    const pendiente = total - totalAbonado;
+
+    const procederConPago = async () => {
+      try {
+        await ventasService.updatePagado(id, true);
+        setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
+      } catch (_e) {
+        Alert.alert("Supabase", "No se pudo actualizar el estado de pago");
+      }
+    };
+
+    if (pendiente > 0.01) {
+      Alert.alert(
+        "Confirmar Pago Forzado",
+        `La persona debe ${formatMoney(pendiente)}.\n\n¿Estás seguro de marcar como pagado?`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Sí, marcar pagado",
+            style: "destructive",
+            onPress: procederConPago
+          }
+        ]
+      );
+    } else {
+      procederConPago();
     }
   };
 
