@@ -71,7 +71,10 @@ export default function Backup() {
   };
 
   return (
-    <ScrollView style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + 12 }]}>
+    <ScrollView
+      style={[styles.screen, { paddingTop: insets.top }]}
+      contentContainerStyle={{ padding: 12, paddingBottom: insets.bottom + 80 }}
+    >
       <Text style={styles.header}>💾 Respaldo de Datos</Text>
 
       <View style={styles.card}>
@@ -89,7 +92,7 @@ export default function Backup() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Acciones</Text>
-        
+
         <TouchableOpacity
           style={[styles.button, styles.buttonPrimary, loading && styles.buttonDisabled]}
           onPress={handleCrearBackup}
@@ -145,7 +148,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f0fdf4',
-    padding: 12,
+    // padding removed here, moved to contentContainerStyle
   },
   header: {
     fontSize: 22,
