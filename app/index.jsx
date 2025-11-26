@@ -66,6 +66,9 @@ export default function Index() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [ventaParaEditar, setVentaParaEditar] = useState(null);
 
+  // Estado para saber si estamos abonando a una venta existente o creando una nueva con abono
+  const [isAbonoInicial, setIsAbonoInicial] = useState(false);
+
   // --- Supabase: mapeo y carga inicial ---
   const mapRowToVenta = (row) => {
     return {
@@ -360,89 +363,16 @@ export default function Index() {
     }
 
     const total = carrito.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
-    const mitad = total / 2;
 
-    Alert.prompt(
-      "Abonar al Crear",
-      `Total: ${formatMoney(total)}\nSugerencia (mitad): ${formatMoney(mitad)}\n\n¿Cuánto desea abonar?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Abonar",
-          onPress: async (montoStr) => {
-            const monto = parseFloat(montoStr);
-            if (!monto || monto <= 0) {
-              Alert.alert("Error", "Ingresa un monto válido");
-              return;
-            }
-            if (monto > total + 0.01) {
-              Alert.alert("Error", `El monto no puede ser mayor al total (${formatMoney(total)})`);
-              return;
-            }
-
-            try {
-              const estaPagado = monto >= total - 0.01;
-
-              const created = await ventasService.createVenta({
-                cliente: cliente.trim(),
-                productos: carrito,
-                metodo_pago: metodoPago,
-                pagado: estaPagado,
-                abonos: [{
-                  monto,
-                  fecha: new Date().toISOString(),
-                  metodo: metodoPago
-                }]
-              });
-              const nuevaVenta = mapRowToVenta(created);
-              setVentas((prev) => [nuevaVenta, ...prev]);
-
-              const pendiente = total - monto;
-              if (estaPagado) {
-                Alert.alert("✅ Pagado", `Venta registrada y pagada: ${formatMoney(total)}`);
-              } else {
-                Alert.alert("✅ Abonado", `Abono registrado: ${formatMoney(monto)}\nPendiente: ${formatMoney(pendiente)}`);
-              }
-
-              // limpiar form y carrito
-              setCliente("");
-              setCarrito([]);
-              setMetodoPago("Efectivo");
-            } catch (_e) {
-              console.error("Supabase insert error:", _e);
-
-              // Guardar offline
-              try {
-                const estaPagado = monto >= total - 0.01;
-                await offlineStorage.savePendingVenta({
-                  cliente: cliente.trim(),
-                  productos: carrito,
-                  metodo_pago: metodoPago,
-                  pagado: estaPagado,
-                  abonos: [{
-                    monto,
-                    fecha: new Date().toISOString(),
-                    metodo: metodoPago
-                  }]
-                });
-                await loadPendingVentas();
-                Alert.alert("⚠️ Sin conexión", "Venta guardada en el dispositivo. Sincroniza cuando tengas internet.");
-
-                // limpiar form y carrito
-                setCliente("");
-                setCarrito([]);
-                setMetodoPago("Efectivo");
-              } catch (storageError) {
-                Alert.alert("Error crítico", "No se pudo guardar la venta ni online ni offline.");
-              }
-            }
-          },
-        },
-      ],
-      "plain-text",
-      mitad.toString(),
-      "numeric"
-    );
+    // Preparar el modal para abono inicial
+    setIsAbonoInicial(true);
+    setVentaParaAbonar({
+      cliente: cliente.trim(),
+      productos: carrito,
+      total: total // Propiedad temporal para mostrar en el modal
+    });
+    setMontoAbono("");
+    setModalAbonoVisible(true);
   };
 
   const finalizarVenta = async () => {
@@ -509,6 +439,7 @@ export default function Index() {
   };
 
   const abonarVenta = (venta) => {
+    setIsAbonoInicial(false);
     setVentaParaAbonar(venta);
     const total = venta.productos.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
     const totalAbonado = (venta.abonos || []).reduce((sum, a) => sum + Number(a.monto), 0);
@@ -522,9 +453,18 @@ export default function Index() {
   const confirmarAbono = async () => {
     if (!ventaParaAbonar) return;
 
-    const total = ventaParaAbonar.productos.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
-    const totalAbonado = (ventaParaAbonar.abonos || []).reduce((sum, a) => sum + Number(a.monto), 0);
-    const pendiente = total - totalAbonado;
+    // Calcular totales dependiendo si es abono inicial o venta existente
+    let total, totalAbonado, pendiente;
+
+    if (isAbonoInicial) {
+      total = ventaParaAbonar.total; // Usamos la propiedad temporal
+      totalAbonado = 0;
+      pendiente = total;
+    } else {
+      total = ventaParaAbonar.productos.reduce((sum, p) => sum + p.cantidad * p.precio, 0);
+      totalAbonado = (ventaParaAbonar.abonos || []).reduce((sum, a) => sum + Number(a.monto), 0);
+      pendiente = total - totalAbonado;
+    }
 
     // Parsear el monto formateado (ej: "128.381" -> 128381)
     const monto = parseCurrency(montoAbono);
@@ -544,15 +484,37 @@ export default function Index() {
         metodo: metodoPago,
       };
 
-      await ventasService.addAbono(ventaParaAbonar.id, nuevoAbono);
+      if (isAbonoInicial) {
+        // Lógica para crear venta con abono inicial
+        const estaPagado = monto >= total - 0.01;
 
-      // Recargar ventas
-      const data = await ventasService.getAllVentas();
-      setVentas(data.map(mapRowToVenta));
+        const created = await ventasService.createVenta({
+          cliente: ventaParaAbonar.cliente,
+          productos: ventaParaAbonar.productos,
+          metodo_pago: metodoPago,
+          pagado: estaPagado,
+          abonos: [nuevoAbono]
+        });
+        const nuevaVenta = mapRowToVenta(created);
+        setVentas((prev) => [nuevaVenta, ...prev]);
+
+        // Limpiar
+        setCliente("");
+        setCarrito([]);
+        setMetodoPago("Efectivo");
+      } else {
+        // Lógica existente para agregar abono a venta ya creada
+        await ventasService.addAbono(ventaParaAbonar.id, nuevoAbono);
+
+        // Recargar ventas
+        const data = await ventasService.getAllVentas();
+        setVentas(data.map(mapRowToVenta));
+      }
 
       setModalAbonoVisible(false);
       setVentaParaAbonar(null);
       setMontoAbono("");
+      setIsAbonoInicial(false);
 
       // Calcular nuevo total abonado y pendiente después del abono
       const nuevoTotalAbonado = totalAbonado + monto;
@@ -572,7 +534,39 @@ export default function Index() {
 
       Alert.alert("✅ Éxito", mensaje);
     } catch (_e) {
-      Alert.alert("Error", "No se pudo registrar el abono");
+      console.error("Error en abono:", _e);
+
+      if (isAbonoInicial) {
+        // Manejo offline para abono inicial
+        try {
+          const estaPagado = monto >= total - 0.01;
+          await offlineStorage.savePendingVenta({
+            cliente: ventaParaAbonar.cliente,
+            productos: ventaParaAbonar.productos,
+            metodo_pago: metodoPago,
+            pagado: estaPagado,
+            abonos: [{
+              monto,
+              fecha: new Date().toISOString(),
+              metodo: metodoPago
+            }]
+          });
+          await loadPendingVentas();
+          Alert.alert("⚠️ Sin conexión", "Venta guardada en el dispositivo. Sincroniza cuando tengas internet.");
+
+          setCliente("");
+          setCarrito([]);
+          setMetodoPago("Efectivo");
+          setModalAbonoVisible(false);
+          setVentaParaAbonar(null);
+          setMontoAbono("");
+          setIsAbonoInicial(false);
+        } catch (storageError) {
+          Alert.alert("Error crítico", "No se pudo guardar la venta ni online ni offline.");
+        }
+      } else {
+        Alert.alert("Error", "No se pudo registrar el abono");
+      }
     }
   };
 
