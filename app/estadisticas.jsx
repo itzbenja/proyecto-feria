@@ -51,7 +51,11 @@ export default function Estadisticas() {
   }
 
   return (
-    <ScrollView style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom + 12 }]}>
+
+    <ScrollView
+      style={[styles.screen, { paddingTop: insets.top }]}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+    >
       <Text style={styles.header}>📊 Estadísticas Detalladas</Text>
 
       {/* Resumen General */}

@@ -69,7 +69,7 @@ export default function Pendientes() {
 
       // Calcular total abonado - verificar diferentes formatos
       let abonadoVenta = 0;
-      
+
       if (Array.isArray(v.abonos) && v.abonos.length > 0) {
         abonadoVenta = v.abonos.reduce((sum, a) => {
           // Manejar diferentes formatos de abono
@@ -77,7 +77,7 @@ export default function Pendientes() {
           return sum + Number(monto);
         }, 0);
       }
-      
+
       totalAbonado += abonadoVenta;
     });
 
@@ -101,7 +101,8 @@ export default function Pendientes() {
   }
 
   return (
-    <View style={[styles.screen, { paddingBottom: insets.bottom + 12, paddingTop: insets.top }]}>
+
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Text style={styles.header}>📋 Pedidos por Estado</Text>
 
       {/* Filtros */}
@@ -135,15 +136,19 @@ export default function Pendientes() {
       {ventasFiltradas.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
-            {filtroEstado === "Todos" 
-              ? "No hay pedidos registrados" 
+            {filtroEstado === "Todos"
+              ? "No hay pedidos registrados"
               : `No hay pedidos con estado "${filtroEstado}"`}
           </Text>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Text style={styles.backText}>⬅ Volver</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={ventasFiltradas}
           keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
           renderItem={({ item }) => {
             const total = item.productos.reduce(
               (acc, p) => acc + p.cantidad * p.precio,
@@ -194,12 +199,13 @@ export default function Pendientes() {
               </View>
             );
           }}
+          ListFooterComponent={
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Text style={styles.backText}>⬅ Volver</Text>
+            </TouchableOpacity>
+          }
         />
       )}
-
-      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-        <Text style={styles.backText}>⬅ Volver</Text>
-      </TouchableOpacity>
     </View>
   );
 }
