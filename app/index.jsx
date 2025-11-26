@@ -20,6 +20,7 @@ import TicketModal from "../components/TicketModal";
 import EditVentaModal from "../components/EditVentaModal";
 import AuthScreen from "../components/AuthScreen";
 import { offlineStorage } from "../utils/offlineStorage";
+import { offlineService } from "../utils/offline";
 
 
 
@@ -105,10 +106,19 @@ export default function Index() {
     };
   }, []);
 
+
+
   // Cargar ventas pendientes offline
   useEffect(() => {
     loadPendingVentas();
   }, []);
+
+  // Cachear ventas cuando cambian para mantener consistencia con otras pantallas
+  useEffect(() => {
+    if (ventas.length > 0) {
+      offlineService.cacheVentas(ventas);
+    }
+  }, [ventas]);
 
   const loadPendingVentas = async () => {
     const pending = await offlineStorage.getPendingVentas();

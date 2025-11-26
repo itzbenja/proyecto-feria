@@ -8,7 +8,7 @@ const mapRowToVenta = (row) => {
     id: row?.id ?? row?.identificacion ?? `temp-${Date.now()}`,
     cliente: row?.cliente ?? '',
     productos: Array.isArray(row?.productos) ? row.productos : [],
-    metodoPago: row?.metodo_pago ?? 'Efectivo',
+    metodoPago: row?.metodo_pago ?? row?.metodoPago ?? 'Efectivo',
     fecha: row?.fecha ?? new Date().toISOString(),
     pagado: !!row?.pagado,
     abonos: Array.isArray(row?.abonos) ? row.abonos : [],
@@ -29,11 +29,11 @@ export function useVentas() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Intentar cargar con modo offline
       const { ventas: ventasData, source } = await offlineService.loadVentas();
       setVentas(ventasData.map(mapRowToVenta));
-      
+
       // Si estaba offline, intentar sincronizar
       if (source === 'cache' || source === 'offline_queue') {
         const syncResult = await offlineService.syncQueue();
@@ -47,7 +47,7 @@ export function useVentas() {
       const errorMessage = e?.message || 'Error al cargar ventas';
       setError(errorMessage);
       console.error('Error loading ventas:', e);
-      
+
       // Intentar cargar desde caché si falla
       try {
         const cached = await offlineService.getCachedVentas();
@@ -91,10 +91,10 @@ export function useVentas() {
   const createVenta = useCallback(async (ventaData) => {
     try {
       setError(null);
-      
+
       // Verificar conexión
       const isOnline = await offlineService.isOnline();
-      
+
       if (!isOnline) {
         // Guardar en cola offline
         const ventaOffline = await offlineService.queueVenta(ventaData);
@@ -102,14 +102,14 @@ export function useVentas() {
         setVentas(prev => [mapped, ...prev]);
         return mapped;
       }
-      
+
       // Crear en servidor
       const created = await ventasService.createVenta(ventaData);
       const mapped = mapRowToVenta(created);
-      
+
       // Actualización optimista
       setVentas(prev => [mapped, ...prev]);
-      
+
       return mapped;
     } catch (e) {
       // Si falla, intentar guardar offline
@@ -130,16 +130,16 @@ export function useVentas() {
   const updatePagado = useCallback(async (ventaId, pagado) => {
     try {
       setError(null);
-      
+
       // Actualización optimista
-      setVentas(prev => prev.map(v => 
+      setVentas(prev => prev.map(v =>
         v.id === ventaId ? { ...v, pagado } : v
       ));
-      
+
       await ventasService.updatePagado(ventaId, pagado);
     } catch (e) {
       // Revertir si falla
-      setVentas(prev => prev.map(v => 
+      setVentas(prev => prev.map(v =>
         v.id === ventaId ? { ...v, pagado: !pagado } : v
       ));
       const errorMessage = e?.message || 'Error al actualizar pago';
@@ -154,11 +154,11 @@ export function useVentas() {
       setError(null);
       const updated = await ventasService.addAbono(ventaId, abono);
       const mapped = mapRowToVenta(updated);
-      
-      setVentas(prev => prev.map(v => 
+
+      setVentas(prev => prev.map(v =>
         v.id === ventaId ? mapped : v
       ));
-      
+
       return mapped;
     } catch (e) {
       const errorMessage = e?.message || 'Error al agregar abono';
@@ -173,11 +173,11 @@ export function useVentas() {
       setError(null);
       const updated = await ventasService.updateVenta(ventaId, ventaData);
       const mapped = mapRowToVenta(updated);
-      
-      setVentas(prev => prev.map(v => 
+
+      setVentas(prev => prev.map(v =>
         v.id === ventaId ? mapped : v
       ));
-      
+
       return mapped;
     } catch (e) {
       const errorMessage = e?.message || 'Error al actualizar venta';
@@ -190,21 +190,21 @@ export function useVentas() {
   const deleteVenta = useCallback(async (ventaId) => {
     // Guardar copia para revertir si falla
     let ventaToDelete = null;
-    
+
     try {
       setError(null);
-      
+
       // Buscar la venta antes de eliminarla
       setVentas(prev => {
         ventaToDelete = prev.find(v => v.id === ventaId);
         return prev.filter(v => v.id !== ventaId);
       });
-      
+
       await ventasService.deleteVenta(ventaId);
     } catch (e) {
       // Revertir si falla
       if (ventaToDelete) {
-        setVentas(prev => [...prev, ventaToDelete].sort((a, b) => 
+        setVentas(prev => [...prev, ventaToDelete].sort((a, b) =>
           new Date(b.fecha) - new Date(a.fecha)
         ));
       }
@@ -226,8 +226,8 @@ export function useVentas() {
       .filter(v => {
         const fecha = new Date(v.fecha);
         return fecha.getDate() === hoy.getDate() &&
-               fecha.getMonth() === hoy.getMonth() &&
-               fecha.getFullYear() === hoy.getFullYear();
+          fecha.getMonth() === hoy.getMonth() &&
+          fecha.getFullYear() === hoy.getFullYear();
       })
       .reduce((acc, v) => {
         return acc + v.productos.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
@@ -240,8 +240,8 @@ export function useVentas() {
     return ventas.filter(v => {
       const fecha = new Date(v.fecha);
       return fecha.getDate() === hoy.getDate() &&
-             fecha.getMonth() === hoy.getMonth() &&
-             fecha.getFullYear() === hoy.getFullYear();
+        fecha.getMonth() === hoy.getMonth() &&
+        fecha.getFullYear() === hoy.getFullYear();
     }).length;
   }, [ventas]);
 
