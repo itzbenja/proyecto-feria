@@ -1,0 +1,9 @@
+﻿[dotenv@17.2.3] injecting env (2) from .env -- tip: ÔÜÖ´©Å  override existing env vars with { override: true }
+­ƒº¬ Testing Force Pay on Sale with Debt...
+Ô£à Created test sale ID: c79d432d-acab-43f7-ae45-d3942918c0d1
+   Initial State -> Pagado: false
+­ƒæë Attempting to set pagado = true...
+   Result State -> Pagado: false
+ÔØî FAILURE: The database REJECTED the force pay (value remained false).
+   ÔÜá´©Å This confirms a database trigger is enforcing consistency.
+­ƒº╣ Cleaning up...

@@ -49,6 +49,11 @@ export default function Pendientes() {
       const tieneAbonoParcial = !estaCompletamentePagado && totalAbonado > 0.01;
       const faltaPagar = !estaCompletamentePagado; // Cualquier venta no completamente pagada
 
+      // DEBUG LOG
+      if (venta.cliente === 'papa' || venta.cliente === 'ins') {
+        console.log(`DEBUG: ID: ${venta.id}, Cliente: ${venta.cliente}, Pagado: ${venta.pagado}, Total: ${total}, Abonado: ${totalAbonado}, Completo: ${estaCompletamentePagado}, Filtro: ${filtroEstado}`);
+      }
+
       if (filtroEstado === "Pagado") {
         return estaCompletamentePagado;
       } else if (filtroEstado === "Pendiente") {

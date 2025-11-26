@@ -100,6 +100,7 @@ export const ventasService = {
   // Actualizar estado de pago
   async updatePagado(ventaId, pagado) {
     try {
+      console.log(`[Supabase] Updating pagado for ${ventaId} to ${pagado}`);
       const { data, error } = await supabase
         .from('ventas')
         .update({ pagado })
@@ -110,6 +111,13 @@ export const ventasService = {
         console.error('Error al actualizar pago:', JSON.stringify(error, null, 2));
         throw error;
       }
+
+      if (!data || data.length === 0) {
+        console.warn(`[Supabase] Warning: No rows updated for ID ${ventaId}`);
+      } else {
+        console.log(`[Supabase] Update successful:`, data[0]);
+      }
+
       return data[0]
     } catch (error) {
       console.error('Error al actualizar pago:', error)

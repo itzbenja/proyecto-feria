@@ -431,10 +431,25 @@ export default function Index() {
 
     const procederConPago = async () => {
       try {
+        // Si hay deuda pendiente, agregar un abono de ajuste para saldarla
+        // Esto es necesario porque la base de datos tiene un trigger que impide
+        // marcar como pagado si hay deuda.
+        if (pendiente > 0.01) {
+          await ventasService.addAbono(id, {
+            monto: pendiente,
+            fecha: new Date().toISOString(),
+            metodo: "Cierre manual"
+          });
+        }
+
         await ventasService.updatePagado(id, true);
-        setVentas((prev) => prev.map((v) => (v.id === id ? { ...v, pagado: true } : v)));
+
+        // Recargar datos reales para confirmar persistencia
+        const updatedVentas = await ventasService.getAllVentas();
+        setVentas(updatedVentas);
       } catch (_e) {
-        Alert.alert("Supabase", "No se pudo actualizar el estado de pago");
+        console.error(_e);
+        Alert.alert("Error", "No se pudo actualizar el estado de pago. Intente nuevamente.");
       }
     };
 
