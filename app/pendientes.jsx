@@ -21,11 +21,20 @@ const formatDate = (iso) => new Date(iso).toLocaleString('es-ES', {
   minute: '2-digit'
 });
 
+import { useFocusEffect } from "expo-router";
+import { useCallback } from "react";
+
 export default function Pendientes() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { ventas, loading: ventasLoading } = useVentas();
+  const { ventas, loading: ventasLoading, refresh } = useVentas();
   const [filtroEstado, setFiltroEstado] = useState("Todos"); // Todos, Pagado, Pendiente, Abono
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   // Filtrar ventas según el estado seleccionado
   const ventasFiltradas = useMemo(() => {
